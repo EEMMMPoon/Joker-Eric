@@ -1,0 +1,17 @@
+name: Daily Push Notification
+
+on:
+  schedule:
+    - cron: '30 10 * * *'  # 10:30 UTC = 18:30 HKT
+  workflow_dispatch:        # Allow manual trigger
+
+jobs:
+  send-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send daily push notification
+        run: |
+          curl -X POST "${{ secrets.WORKER_URL }}/send" \
+            -H "Authorization: Bearer ${{ secrets.PUSH_SEND_SECRET }}" \
+            -H "Content-Type: application/json" \
+            -d '{"title":"Cap. 621 Daily Test","body":"Your daily test is ready \u2014 6 questions waiting!","url":"/"}'
