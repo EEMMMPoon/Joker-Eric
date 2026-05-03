@@ -64,11 +64,12 @@ npx wrangler secret put SEND_SECRET
 # Paste a strong random string, e.g.: openssl rand -hex 32
 ```
 
-Also update `VAPID_EMAIL` in `worker/wrangler.toml`:
+Also update `VAPID_EMAIL` in `worker/wrangler.toml` (the `VAPID_PUBLIC_KEY` is already set):
 
 ```toml
 [vars]
 VAPID_EMAIL = "mailto:your@email.com"
+VAPID_PUBLIC_KEY = "BGHC4LEgcSRLCwSR6ZgPfpwfgNcy_Iftn7McC5HFqg6OlTVdkuB-UwuwGSzJsEfpVZaKIIxYtWo3wqz1WiFWO3k"
 ```
 
 ### 4. Deploy Worker

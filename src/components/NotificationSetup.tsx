@@ -4,9 +4,16 @@ import { subscribeToPush, WORKER_BASE_URL } from '../lib/pushUtils';
 
 type PermissionState = 'default' | 'granted' | 'denied' | 'unsupported';
 
+function getInitialPermission(): PermissionState {
+  if (typeof window === 'undefined' || !('Notification' in window)) return 'unsupported';
+  return Notification.permission as PermissionState;
+}
+
 export default function NotificationSetup() {
-  const [permission, setPermission] = useState<PermissionState>('default');
-  const [subscribed, setSubscribed] = useState(false);
+  const [permission, setPermission] = useState<PermissionState>(getInitialPermission);
+  const [subscribed, setSubscribed] = useState(
+    () => localStorage.getItem('cap621_subscribed') === 'true',
+  );
   const [loading, setLoading] = useState(false);
   const [statusMsg, setStatusMsg] = useState('');
   const isIOS =
@@ -14,13 +21,14 @@ export default function NotificationSetup() {
 
   const { needRefresh: [needsRefresh], updateServiceWorker } = useRegisterSW();
 
+  // Sync if permission changed externally (e.g., user toggled in OS settings)
   useEffect(() => {
-    if (!('Notification' in window)) {
-      setPermission('unsupported');
-      return;
-    }
-    setPermission(Notification.permission as PermissionState);
-    setSubscribed(localStorage.getItem('cap621_subscribed') === 'true');
+    const id = setInterval(() => {
+      if (!('Notification' in window)) return;
+      const current = Notification.permission as PermissionState;
+      setPermission((prev) => (prev !== current ? current : prev));
+    }, 2000);
+    return () => clearInterval(id);
   }, []);
 
   async function handleSubscribe() {

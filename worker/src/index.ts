@@ -1,6 +1,7 @@
 interface Env {
   SUBSCRIPTIONS: KVNamespace;
   VAPID_PRIVATE_KEY: string;
+  VAPID_PUBLIC_KEY: string;
   VAPID_EMAIL: string;
   SEND_SECRET: string;
 }
@@ -49,6 +50,7 @@ async function buildVapidJwt(
   endpoint: string,
   privateKeyB64url: string,
   email: string,
+  vapidPublicKey: string,
 ): Promise<{ authorization: string; vapidPublicKey: string }> {
   const url = new URL(endpoint);
   const aud = `${url.protocol}//${url.host}`;
@@ -67,23 +69,15 @@ async function buildVapidJwt(
   const jwt = `${header}.${payload}.${sig}`;
 
   // Derive the public key bytes from private key (not trivial without a library)
-  // Use VAPID_PUBLIC_KEY baked into the environment or derive here.
-  // For simplicity, export the public key from the imported private key.
-  const pubKeyData = await derivePublicKeyFromPrivate(privateKeyB64url);
+  // Use VAPID_PUBLIC_KEY from environment variable for consistency.
+  const pubKeyData = vapidPublicKey;
   return {
     authorization: `vapid t=${jwt}, k=${pubKeyData}`,
     vapidPublicKey: pubKeyData,
   };
 }
 
-async function derivePublicKeyFromPrivate(_privateKeyB64url: string): Promise<string> {
-  // The Web Crypto API does not expose a way to derive a P-256 public key
-  // from a raw 32-byte private scalar without additional dependencies.
-  // Return the hard-coded VAPID public key (same value as used in the frontend).
-  return 'BGHC4LEgcSRLCwSR6ZgPfpwfgNcy_Iftn7McC5HFqg6OlTVdkuB-UwuwGSzJsEfpVZaKIIxYtWo3wqz1WiFWO3k';
-}
-
-// ── Full VAPID-signed push using applicationServerKey JWK pair ─────────────────
+// ── Push sender ────────────────────────────────────────────────────────────────
 
 async function sendPushNotification(
   subscription: PushSubscription,
@@ -94,6 +88,7 @@ async function sendPushNotification(
     subscription.endpoint,
     env.VAPID_PRIVATE_KEY,
     env.VAPID_EMAIL,
+    env.VAPID_PUBLIC_KEY,
   );
 
   return fetch(subscription.endpoint, {
@@ -117,7 +112,14 @@ async function handleSubscribe(request: Request, env: Env): Promise<Response> {
     return new Response('Invalid JSON', { status: 400 });
   }
 
-  const key = (sub as unknown as { keys?: { auth?: string } }).keys?.auth ?? crypto.randomUUID();
+  // Use the endpoint URL as a stable, unique key for this subscription
+  const endpoint = (sub as unknown as { endpoint?: string }).endpoint;
+  if (!endpoint) {
+    return new Response('Missing endpoint', { status: 400 });
+  }
+  // Hash the endpoint to keep the KV key short and safe
+  const keyBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(endpoint));
+  const key = b64url(keyBuf).slice(0, 43); // 256-bit → 43 url-safe chars
   await env.SUBSCRIPTIONS.put(key, JSON.stringify(sub));
   return new Response('Subscribed', { status: 201 });
 }
