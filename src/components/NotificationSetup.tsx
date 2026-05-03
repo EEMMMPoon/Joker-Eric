@@ -12,7 +12,7 @@ export default function NotificationSetup() {
   const isIOS =
     /iP(hone|od|ad)/.test(navigator.userAgent) && !(window as unknown as { MSStream?: unknown }).MSStream;
 
-  const { needRefresh: [needRefresh], updateServiceWorker } = useRegisterSW();
+  const { needRefresh: [needsRefresh], updateServiceWorker } = useRegisterSW();
 
   useEffect(() => {
     if (!('Notification' in window)) {
@@ -84,7 +84,7 @@ export default function NotificationSetup() {
         </strong>
       </div>
 
-      {needRefresh && (
+      {needsRefresh && (
         <p className="notif-setup__update">
           A new version is available.{' '}
           <button className="btn btn--link" onClick={() => updateServiceWorker(true)}>

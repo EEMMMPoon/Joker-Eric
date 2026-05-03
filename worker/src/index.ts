@@ -76,20 +76,10 @@ async function buildVapidJwt(
   };
 }
 
-async function derivePublicKeyFromPrivate(privateKeyB64url: string): Promise<string> {
-  const padding = '='.repeat((4 - (privateKeyB64url.length % 4)) % 4);
-  const b64 = (privateKeyB64url + padding).replace(/-/g, '+').replace(/_/g, '/');
-  const raw = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-  const keyBytes = raw.slice(0, 32);
-
-  // Re-import as a key pair using generateKey then set the private scalar
-  // Workaround: import as PKCS8 or use importKey with 'raw' for public
-  // Since Web Crypto does not let us extract P-256 public key from raw private scalar directly,
-  // we import using the JWK with placeholder x/y and then export the public key.
-  // NOTE: This won't work without real x/y. We instead embed the VAPID public key as a constant.
-  // In production, set VAPID_PUBLIC_KEY as an environment variable on the worker.
-  void keyBytes;
-  // Return the hard-coded VAPID public key (same as in the frontend)
+async function derivePublicKeyFromPrivate(_privateKeyB64url: string): Promise<string> {
+  // The Web Crypto API does not expose a way to derive a P-256 public key
+  // from a raw 32-byte private scalar without additional dependencies.
+  // Return the hard-coded VAPID public key (same value as used in the frontend).
   return 'BGHC4LEgcSRLCwSR6ZgPfpwfgNcy_Iftn7McC5HFqg6OlTVdkuB-UwuwGSzJsEfpVZaKIIxYtWo3wqz1WiFWO3k';
 }
 

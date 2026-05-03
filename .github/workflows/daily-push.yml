@@ -8,6 +8,7 @@ on:
 jobs:
   send-push:
     runs-on: ubuntu-latest
+    permissions: {}
     steps:
       - name: Send daily push notification
         run: |
